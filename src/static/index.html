@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Pipeline Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338ca;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text: #1F2937;
+            --text-secondary: #6B7280;
+            --border: #E5E7EB;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* Upload Section */
+        .upload-zone {
+            background: var(--card-bg);
+            border: 2px dashed var(--border);
+            border-radius: 1rem;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background-color: #EEF2FF;
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            height: calc(100vh - 300px);
+        }
+
+        /* Document List */
+        .doc-list-container {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .doc-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 0.5rem;
+        }
+
+        .doc-item:hover {
+            background-color: #F9FAFB;
+        }
+
+        .doc-item.active {
+            background-color: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+
+        .doc-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .doc-meta {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Viewer */
+        .viewer-container {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .chunk-card {
+            background: #F9FAFB;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .chunk-header {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chunk-content {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 2rem;
+        }
+
+        /* Loading Overlay */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Action Buttons */
+        .doc-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-sm:hover {
+            opacity: 0.8;
+        }
+
+        .btn-edit {
+            background-color: #F59E0B;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #EF4444;
+            color: white;
+        }
+
+        .btn-view {
+            background-color: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>OCR Pipeline App</h1>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">+ Upload New File</button>
+            <input type="file" id="fileInput" multiple style="display: none" onchange="handleFiles(this.files)">
+        </header>
+
+        <div class="upload-zone" id="dropZone">
+            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <h3>Kéo thả file vào đây hoặc click để upload</h3>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem">Hỗ trợ .txt, .pdf, .docx</p>
+
+            <div style="margin-top: 1rem; text-align: left; display: inline-block;">
+                <label style="font-weight: 500; margin-right: 1rem;">Chia nhỏ theo:</label>
+                <input type="radio" id="modeSentence" name="chunkMode" value="sentence" checked>
+                <label for="modeSentence" style="margin-right: 1rem;">Câu (Sentence)</label>
+
+                <input type="radio" id="modeParagraph" name="chunkMode" value="paragraph">
+                <label for="modeParagraph">Đoạn (Paragraph)</label>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="doc-list-container">
+                <h3 style="margin-bottom: 1rem">Documents</h3>
+                <div id="docList">
+                    <!-- Document items will be injected here -->
+                </div>
+            </div>
+
+            <div class="viewer-container" id="viewer">
+                <div class="empty-state">Chọn một document để xem chi tiết</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = ""; // Relative path
+
+        // Load documents on start
+        fetchDocuments();
+
+        // Drag & Drop handlers
+        const dropZone = document.getElementById('dropZone');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        async function handleFiles(files) {
+            if (!files.length) return;
+
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+
+            // Lấy chế độ chunking đã chọn
+            const chunkMode = document.querySelector('input[name="chunkMode"]:checked').value;
+            formData.append('chunk_mode', chunkMode);
+
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_URL}/upload/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                console.log(data);
+
+                // Hiển thị kết quả chi tiết
+                let message = "";
+                let hasError = false;
+                data.results.forEach(r => {
+                    if (r.status === "success") {
+                        message += `✅ ${r.filename}: ${r.message}\n`;
+                    } else {
+                        message += `❌ ${r.filename}: ${r.message}\n`;
+                        hasError = true;
+                    }
+                });
+
+                alert(message || "Không có file nào được xử lý.");
+                fetchDocuments(); // Refresh list
+            } catch (error) {
+                console.error('Error:', error);
+                alert("Có lỗi xảy ra khi upload.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function fetchDocuments() {
+            try {
+                const response = await fetch(`${API_URL}/documents/`);
+                const docs = await response.json();
+                renderDocList(docs);
+            } catch (error) {
+                console.error('Error fetching docs:', error);
+            }
+        }
+
+        function renderDocList(docs) {
+            const list = document.getElementById('docList');
+            list.innerHTML = '';
+
+            docs.forEach(doc => {
+                const item = document.createElement('div');
+                item.className = 'doc-item';
+                item.id = `doc-${doc.id}`;
+
+                // Click vào item để xem chi tiết
+                item.onclick = () => loadDocumentDetail(doc.id, item);
+
+                const date = new Date(doc.upload_date).toLocaleDateString('vi-VN');
+
+                item.innerHTML = `
+                <div class="doc-name" title="${doc.file_name}">${doc.file_name}</div>
+                <div class="doc-meta">
+                    <span>${doc.file_type}</span>
+                    <span>${date}</span>
+                </div>
+            `;
+                list.appendChild(item);
+            });
+        }
+
+        async function loadDocumentDetail(id, element) {
+            // Highlight active item
+            document.querySelectorAll('.doc-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_URL}/documents/${id}`);
+                const data = await response.json();
+                renderViewer(data);
+            } catch (error) {
+                console.error('Error loading detail:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderViewer(data) {
+            const viewer = document.getElementById('viewer');
+            const doc = data.document;
+            const chunks = data.chunks;
+
+            let html = `
+            <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <h2 style="margin-bottom: 0.5rem; word-break: break-all; margin-right: 1rem;">${doc.file_name}</h2>
+                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                        <button class="btn-sm btn-edit" style="min-width: 100px; padding: 0.5rem;" onclick="editDocument(${doc.id}, '${doc.file_name}')">Sửa tên</button>
+                        <button class="btn-sm btn-delete" style="min-width: 100px; padding: 0.5rem;" onclick="deleteDocument(${doc.id})">Xóa</button>
+                    </div>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.9rem">
+                    Path: ${doc.file_path} <br>
+                    Size: ${doc.file_size} bytes | Chunks: ${doc.chunk_count}
+                </div>
+            </div>
+            <h3>Chunks Content</h3>
+            <div style="margin-top: 1rem;">
+        `;
+
+            if (chunks.length === 0) {
+                html += '<p>No chunks found.</p>';
+            } else {
+                chunks.forEach(chunk => {
+                    html += `
+                    <div class="chunk-card">
+                        <div class="chunk-header">Chunk #${chunk.chunk_index} | ${chunk.char_count} chars</div>
+                        <div class="chunk-content">${escapeHtml(chunk.content)}</div>
+                    </div>
+                `;
+                });
+            }
+
+            html += '</div>';
+            viewer.innerHTML = html;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        async function editDocument(id, currentName) {
+            const newName = prompt("Nhập tên mới cho document:", currentName);
+            if (!newName || newName === currentName) return;
+
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_URL}/documents/${id}?new_name=${encodeURIComponent(newName)}`, {
+                    method: 'PUT'
+                });
+                if (response.ok) {
+                    alert("Đã cập nhật tên document!");
+                    fetchDocuments();
+                } else {
+                    alert("Lỗi khi cập nhật.");
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert("Có lỗi xảy ra.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteDocument(id) {
+            if (!confirm("Bạn có chắc muốn xóa document này và tất cả chunks?")) return;
+
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_URL}/documents/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    alert("Đã xóa document!");
+                    fetchDocuments();
+                    document.getElementById('viewer').innerHTML = '<div class="empty-state">Chọn một document để xem chi tiết</div>';
+                } else {
+                    alert("Lỗi khi xóa.");
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert("Có lỗi xảy ra.");
+            } finally {
+                showLoading(false);
+            }
+        }
+    </script>
+
+</body>
+
+</html>
