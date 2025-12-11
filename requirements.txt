@@ -1,0 +1,11 @@
+PyPDF2
+python-docx
+chardet
+psycopg2-binary
+sqlalchemy
+pytest
+python-dotenv
+fastapi
+uvicorn
+python-multipart
+pytest-cov
